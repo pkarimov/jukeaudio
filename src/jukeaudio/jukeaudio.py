@@ -24,7 +24,6 @@ async def can_connect_to_juke(ip_address: str):
         async with aiohttp.ClientSession() as session:
             async with session.get(f"http://{ip_address}/api/") as response:
                 contents = await response.json()
-                print(contents)
                 return is_juke_compatible(contents["versions"][0])
     except aiohttp.ClientError:
         return False
