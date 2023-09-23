@@ -142,7 +142,7 @@ async def set_zone_volume(ip_address: str, username: str, password: str, zone_id
         raise UnexpectedException from exc
 
 async def set_zone_input(ip_address: str, username: str, password: str, zone_id: str, input: str):
-    """Set zone volume"""
+    """Set zone input"""
     try:
         hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
         data = "[]"
@@ -152,7 +152,6 @@ async def set_zone_input(ip_address: str, username: str, password: str, zone_id:
         async with aiohttp.ClientSession(headers=hdr) as session:
             async with session.put(f"http://{ip_address}/api/{api_version}/zones/{zone_id}/input", data = data) as response:
                 if response.status != 200:
-                    print(response.status)
                     raise AuthenticationException
                 else:
                     contents = await response.text()
