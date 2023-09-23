@@ -72,7 +72,7 @@ async def get_device_attributes(ip_address: str, username: str, password: str, d
         raise UnexpectedException from exc
 
 async def get_device_config(ip_address: str, username: str, password: str, device_id: str):
-    """Get device attributes"""
+    """Get device config"""
     try:
         hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
         async with aiohttp.ClientSession(headers=hdr) as session:
@@ -198,5 +198,37 @@ async def get_available_inputs(ip_address: str, username: str, password: str, in
                 else:
                     contents = await response.json()
                     return contents["available_types"]
+    except aiohttp.ClientError as exc:
+        raise UnexpectedException from exc
+
+async def set_input_type(ip_address: str, username: str, password: str, input_id: str, type: str):
+    """Set input type"""
+    try:
+        hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+
+        async with aiohttp.ClientSession(headers=hdr) as session:
+            async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/type", data =  { "type": type }) as response:
+                if response.status != 200:
+                    print(response)
+                    raise AuthenticationException
+                else:
+                    contents = await response.text()
+                    return contents
+    except aiohttp.ClientError as exc:
+        raise UnexpectedException from exc
+
+async def enable_input(ip_address: str, username: str, password: str, input_id: str, enable: bool):
+    """Enable/disable an input"""
+    try:
+        hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+
+        async with aiohttp.ClientSession(headers=hdr) as session:
+            async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/enable", data =  { "enable": enable }) as response:
+                if response.status != 200:
+                    print(response)
+                    raise AuthenticationException
+                else:
+                    contents = await response.text()
+                    return contents
     except aiohttp.ClientError as exc:
         raise UnexpectedException from exc
