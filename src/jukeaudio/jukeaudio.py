@@ -2,6 +2,7 @@
 
 import aiohttp
 import base64
+import json
 
 from .exceptions import AuthenticationException, UnexpectedException
 from typing import List
@@ -23,12 +24,24 @@ def is_juke_compatible(ver: str):
 
 async def can_connect_to_juke(ip_address: str):
     """Verify connectivity to a compatible Juke device"""
+    logger.debug(f"Verifying connectivity to Juke with ip_address={ip_address}")
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"http://{ip_address}/api/") as response:
-                contents = await response.json()
-                return is_juke_compatible(contents["versions"][0])
-    except aiohttp.ClientError:
+                try:
+                    contents = await response.json(content_type=None)
+                    return is_juke_compatible(contents["versions"][0])
+                except:
+                    ### Juke currently is not returning JSON from the current API so we need to parse it manually
+                    contents = await response.text()
+                    contents = contents.replace("'", "\"")
+                    versions = json.loads(contents)
+                    for ver in versions:
+                        if is_juke_compatible(ver):
+                            return True
+
+    except Exception as exc:
+        logger.error(f"Error connecting to Juke device: {exc}")
         return False
 
 
@@ -269,6 +282,26 @@ async def get_available_inputs(ip_address: str, username: str, password: str, in
                         raise AuthenticationException
                     else:
                         logger.error(f"Error getting available inputs: {response.status}")
+                        raise UnexpectedException(response.status)
+                else:
+                    contents = await response.json()
+                    return contents["available_types"]
+    except aiohttp.ClientError as exc:
+        raise UnexpectedException from exc
+
+async def get_input_types(ip_address: str, username: str, password: str, input_id: str):
+    """Get input types"""
+    logger.debug(f"Invoking get_input_types with ip_address={ip_address}, input_id={input_id}")
+    try:
+        hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+        async with aiohttp.ClientSession(headers=hdr) as session:
+            async with session.get(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/types") as response:
+                if response.status != 200:
+                    if response.status == 401 or response.status == 403:
+                        logger.error(f"Authentication error: {response.status}")
+                        raise AuthenticationException
+                    else:
+                        logger.error(f"Error getting input types: {response.status}")
                         raise UnexpectedException(response.status)
                 else:
                     contents = await response.json()
