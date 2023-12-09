@@ -7,7 +7,7 @@ import json
 from .exceptions import AuthenticationException, UnexpectedException
 from typing import List
 
-api_version = "v2"
+api_version = "v3"
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,8 +22,9 @@ def is_juke_compatible(ver: str):
     return ver.startswith(f"{api_version}.")
 
 
-class JukeAudioClient:
+class JukeAudioClientV3:
     """Class for working with Juke Audio device"""
+    
     async def can_connect_to_juke(self, ip_address: str):
         """Verify connectivity to a compatible Juke device"""
         logger.debug(f"Verifying connectivity to Juke with ip_address={ip_address}")
@@ -63,7 +64,7 @@ class JukeAudioClient:
                             raise UnexpectedException(response.status)
                     else:
                         contents = await response.json()
-                        return contents
+                        return contents["device_ids"]
         except aiohttp.ClientError as exc:
             raise UnexpectedException from exc
         
@@ -166,6 +167,26 @@ class JukeAudioClient:
                         return contents
         except aiohttp.ClientError as exc:
             raise UnexpectedException from exc
+        
+    async def get_zones_info(self, ip_address: str, username: str, password: str):
+        """Get zone ids"""
+        logger.debug(f"Invoking get_zones with ip_address={ip_address}")
+        try:
+            hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+            async with aiohttp.ClientSession(headers=hdr) as session:
+                async with session.get(f"http://{ip_address}/api/{api_version}/zones/info") as response:
+                    if response.status != 200:
+                        if response.status == 401 or response.status == 403:
+                            logger.error(f"Authentication error: {response.status}")
+                            raise AuthenticationException
+                        else:
+                            logger.error(f"Error getting zones: {response.status}")
+                            raise UnexpectedException(response.status)
+                    else:
+                        contents = await response.json()
+                        return contents
+        except aiohttp.ClientError as exc:
+            raise UnexpectedException from exc
 
     async def get_zone_config(self, ip_address: str, username: str, password: str, zone_id: str):
         """Get zone config"""
@@ -193,7 +214,7 @@ class JukeAudioClient:
         try:
             hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
             async with aiohttp.ClientSession(headers=hdr) as session:
-                async with session.put(f"http://{ip_address}/api/{api_version}/zones/{zone_id}/volume", data = { "volume": volume}) as response:
+                async with session.put(f"http://{ip_address}/api/{api_version}/zones/{zone_id}/volume", json = { "volume": volume}) as response:
                     if response.status != 200:
                         if response.status == 401 or response.status == 403:
                             logger.error(f"Authentication error: {response.status}")
@@ -231,13 +252,18 @@ class JukeAudioClient:
         except aiohttp.ClientError as exc:
             raise UnexpectedException from exc
 
-    async def get_inputs(self, ip_address: str, username: str, password: str):
+    async def get_inputs(self, ip_address: str, username: str, password: str, class_filter: int = None):
         """Get input ids"""
         logger.debug(f"Invoking get_inputs with ip_address={ip_address}")
         try:
             hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+            query_params = ""
+
+            if (class_filter is not None):
+                query_params = f"?class_filter={class_filter}"
+
             async with aiohttp.ClientSession(headers=hdr) as session:
-                async with session.get(f"http://{ip_address}/api/{api_version}/inputs") as response:
+                async with session.get(f"http://{ip_address}/api/{api_version}/inputs/{query_params}") as response:
                     if response.status != 200:
                         if response.status == 401 or response.status == 403:
                             logger.error(f"Authentication error: {response.status}")
@@ -250,7 +276,32 @@ class JukeAudioClient:
                         return contents
         except aiohttp.ClientError as exc:
             raise UnexpectedException from exc
+        
+    async def get_inputs_info(self, ip_address: str, username: str, password: str, class_filter: int = None):
+        """Get input ids"""
+        logger.debug(f"Invoking get_inputs with ip_address={ip_address}")
+        try:
+            hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+            query_params = ""
 
+            if (class_filter is not None):
+                query_params = f"?class_filter={class_filter}"
+
+            async with aiohttp.ClientSession(headers=hdr) as session:
+                async with session.get(f"http://{ip_address}/api/{api_version}/inputs/info{query_params}") as response:
+                    if response.status != 200:
+                        if response.status == 401 or response.status == 403:
+                            logger.error(f"Authentication error: {response.status}")
+                            raise AuthenticationException
+                        else:
+                            logger.error(f"Error getting inputs: {response.status}")
+                            raise UnexpectedException(response.status)
+                    else:
+                        contents = await response.json()
+                        return contents
+        except aiohttp.ClientError as exc:
+            raise UnexpectedException from exc
+        
     async def get_input_config(self, ip_address: str, username: str, password: str, input_id: str):
         """Get input config"""
         logger.debug(f"Invoking get_input_config with ip_address={ip_address}, input_id={input_id}")
@@ -318,7 +369,7 @@ class JukeAudioClient:
             hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
 
             async with aiohttp.ClientSession(headers=hdr) as session:
-                async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/type", data =  { "type": type }) as response:
+                async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/type", json =  { "type": type }) as response:
                     if response.status != 200:
                         if response.status == 401 or response.status == 403:
                             logger.error(f"Authentication error: {response.status}")
@@ -339,7 +390,7 @@ class JukeAudioClient:
             hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
 
             async with aiohttp.ClientSession(headers=hdr) as session:
-                async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/enable", data =  { "enable": enable }) as response:
+                async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/enable", json =  { "enable": enable }) as response:
                     if response.status != 200:
                         if response.status == 401 or response.status == 403:
                             logger.error(f"Authentication error: {response.status}")
