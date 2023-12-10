@@ -24,7 +24,7 @@ def is_juke_compatible(ver: str):
 
 class JukeAudioClientV3:
     """Class for working with Juke Audio device"""
-    
+
     async def can_connect_to_juke(self, ip_address: str):
         """Verify connectivity to a compatible Juke device"""
         logger.debug(f"Verifying connectivity to Juke with ip_address={ip_address}")
@@ -233,12 +233,12 @@ class JukeAudioClientV3:
         logger.debug(f"Invoking set_zone_input with ip_address={ip_address}, zone_id={zone_id}, input={input}")
         try:
             hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
-            data = "[]"
+            input_str = { "input_ids": []}
             if input is not None and len(input)>0:
-                data = f"[\"{input}\"]"
+                input_str = { "input_ids": [input]}
 
             async with aiohttp.ClientSession(headers=hdr) as session:
-                async with session.put(f"http://{ip_address}/api/{api_version}/zones/{zone_id}/input", data = data) as response:
+                async with session.put(f"http://{ip_address}/api/{api_version}/zones/{zone_id}/input", json = input_str) as response:
                     if response.status != 200:
                         if response.status == 401 or response.status == 403:
                             logger.error(f"Authentication error: {response.status}")
