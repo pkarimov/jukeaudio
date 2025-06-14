@@ -383,6 +383,26 @@ class JukeAudioClientV3:
         except aiohttp.ClientError as exc:
             raise UnexpectedException from exc
 
+    async def set_input_volume(self, ip_address: str, username: str, password: str, input_id: str, volume: int):
+        """Set input volume"""
+        logger.debug(f"Invoking set_input_volume with ip_address={ip_address}, input_id={input_id}, volume={volume}")
+        try:
+            hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+            async with aiohttp.ClientSession(headers=hdr) as session:
+                async with session.put(f"http://{ip_address}/api/{api_version}/inputs/{input_id}/volume", json = { "volume": volume}) as response:
+                    if response.status != 200:
+                        if response.status == 401 or response.status == 403:
+                            logger.error(f"Authentication error: {response.status}")
+                            raise AuthenticationException
+                        else:
+                            logger.error(f"Error setting zone volume: {response.status}")
+                            raise UnexpectedException(response.status)
+                    else:
+                        contents = await response.text()
+                        return contents
+        except aiohttp.ClientError as exc:
+            raise UnexpectedException from exc
+
     async def enable_input(self, ip_address: str, username: str, password: str, input_id: str, enable: bool):
         """Enable/disable an input"""
         logger.debug(f"Invoking enable_input with ip_address={ip_address}, input_id={input_id}, enable={enable}")

@@ -3,12 +3,13 @@
 ## Summary
 JukeAudio is a Python implemention for the API exposed by the Juke Audio multi-room amplifiers. 
 
-Supported API version is v2.0 (released with the 4.1.2 firmware) 
+Supported API version are v2.0 (released with the 4.1.2 firmware) and v3.x
 
 ## Features
 - Read diagnostics information from the amplifier
 - Read device information, zones, and inputs
 - Set volume and select input for zones
+- Enable/disable and set volume for inputs
 
 ## Limitations
 - Only a single amplifier set-up is supported
