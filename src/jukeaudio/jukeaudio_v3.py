@@ -68,6 +68,46 @@ class JukeAudioClientV3:
         except aiohttp.ClientError as exc:
             raise UnexpectedException from exc
         
+    async def get_devices_info(self, ip_address: str, username: str, password: str):
+        """Get info for all devices"""
+        logger.debug(f"Invoking get_devices_info with ip_address={ip_address}")
+        try:
+            hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+            async with aiohttp.ClientSession(headers=hdr) as session:
+                async with session.get(f"http://{ip_address}/api/{api_version}/devices/info") as response:
+                    if response.status != 200:
+                        if response.status == 401 or response.status == 403:
+                            logger.error(f"Authentication error: {response.status}")
+                            raise AuthenticationException
+                        else:
+                            logger.error(f"Error getting devices info: {response.status}")
+                            raise UnexpectedException(response.status)
+                    else:
+                        contents = await response.json()
+                        return contents
+        except aiohttp.ClientError as exc:
+            raise UnexpectedException from exc
+        
+    async def get_server_device_id(self, ip_address: str, username: str, password: str):
+        """Get server device ID"""
+        logger.debug(f"Invoking get_server_device_id with ip_address={ip_address}")
+        try:
+            hdr = {"Authorization": f"Bearer {create_auth_header(username, password)}"}
+            async with aiohttp.ClientSession(headers=hdr) as session:
+                async with session.get(f"http://{ip_address}/api/{api_version}/devices/server") as response:
+                    if response.status != 200:
+                        if response.status == 401 or response.status == 403:
+                            logger.error(f"Authentication error: {response.status}")
+                            raise AuthenticationException
+                        else:
+                            logger.error(f"Error getting server device ID: {response.status}")
+                            raise UnexpectedException(response.status)
+                    else:
+                        contents = await response.json()
+                        return contents["device_ids"][0] if "device_ids" in contents and len(contents["device_ids"]) > 0 else None
+        except aiohttp.ClientError as exc:
+            raise UnexpectedException from exc
+
     async def get_device_connection_info(self, ip_address: str, username: str, password: str, device_id: str):
         """Get connection information"""
         logger.debug(f"Invoking get_device_connection_info with ip_address={ip_address}, device_id={device_id}")
